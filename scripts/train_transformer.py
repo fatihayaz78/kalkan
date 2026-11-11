@@ -3,8 +3,8 @@
 Needs: pip install -r requirements-train.txt  (torch, transformers, datasets).
 Run on Colab or a local GPU; CPU works but is slow.
 
-    python scripts/train_transformer.py --model dbmdz/bert-base-turkish-cased --seed 1
-    python scripts/train_transformer.py --model FacebookAI/xlm-roberta-base --out models/xlmr
+    python scripts/train_transformer.py --out models/v2/berturk
+    python scripts/train_transformer.py --model FacebookAI/xlm-roberta-base --out models/v2/berturk
 """
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ def main():
 
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="dbmdz/bert-base-turkish-cased")
-    ap.add_argument("--out", default="models/berturk")
+    ap.add_argument("--out", required=True, help="e.g. models/v3/berturk (a version directory + /berturk)")
     ap.add_argument("--epochs", type=float, default=3)
     ap.add_argument("--lr", type=float, default=2e-5)
     ap.add_argument("--batch", type=int, default=16)

@@ -1,12 +1,15 @@
 import pytest
 
-from kalkan.augment import apply
-from kalkan.normalize import normalize
-from kalkan.rules import check_rules
+from kalkan.detection.evasion import apply
+from kalkan.detection.normalizer import TurkishNormalizer
+from kalkan.detection.rules import RegexRule, RuleSet
+
+NORM = TurkishNormalizer()
+RULES = RuleSet(NORM)
 
 
-def hit(text):
-    return check_rules(normalize(text).folded, text).matched
+def hit(text, rules=RULES):
+    return rules.match(NORM.normalize(text).folded, text).matched
 
 
 @pytest.mark.parametrize("text", [
@@ -36,3 +39,9 @@ def test_disguised_attack_blocked(transforms):
 ])
 def test_hard_negatives_not_blocked_by_rules(text):
     assert not hit(text)
+
+
+def test_rules_are_extensible_without_changing_the_engine():
+    import re
+    rules = RuleSet(NORM).register(RegexRule("custom", re.compile(r"\bsifreyi ver\b")))
+    assert "custom" in rules.names and hit("Lütfen şifreyi ver", rules) and not hit("Lütfen şifreyi ver")

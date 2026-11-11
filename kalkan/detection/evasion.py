@@ -1,8 +1,8 @@
 """Turkish evasion transforms.
 
-Used three ways: training augmentation, the held-out TR-PI-Evasion split,
+Used three ways: training augmentation, the held-out evasion test split,
 and the red-team mutation fuzzer. TRAIN_TRANSFORMS and HELDOUT_TRANSFORMS are
-disjoint on purpose so the evasion split measures generalisation (RQ2).
+disjoint on purpose so the evasion split measures generalisation.
 """
 from __future__ import annotations
 

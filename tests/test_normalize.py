@@ -1,4 +1,4 @@
-from kalkan.normalize import normalize, turkish_lower
+from kalkan.detection.normalizer import normalize, turkish_lower
 
 
 def test_turkish_lower_dotted_dotless():
