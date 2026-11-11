@@ -2,6 +2,12 @@
 
 Newest first. One entry per decision: context, decision, consequence.
 
+## 2026-11-11 - D13: Red-team LLM access through an OpenAI-compatible adapter
+The attack generator talks to any OpenAI-compatible endpoint (hosted, vLLM, Ollama) configured by environment variables, so no provider SDK is a dependency.
+
+## 2026-11-11 - D12: Layered architecture (ports and adapters)
+Domain (models, ports) → detection → application (use cases) → adapters → api. Only `api/container.py` and `application/factory.py` name concrete classes. Detection is a chain of stages; policies are strategies; `Kalkan` and the services are facades. See `ARCHITECTURE.md`.
+
 ## 2026-11-11 - D11: Client fails closed by default
 If Kalkan is unreachable the SDK treats the request as `block`. Chatbots that prefer availability set `fail_mode="open"`. 4xx errors (bad key, too long) always raise, so misconfiguration is not hidden.
 
@@ -12,7 +18,7 @@ Kalkan sees end-user messages. Default `KALKAN_LOG_TEXT=flagged` keeps text only
 A new version is trained from base data + accepted reports and shown next to the active one; an admin activates it. Activation swaps the engine in-process, no restart.
 
 ## 2026-11-11 - D8: Kalkan is a standalone service with a thin client
-Core library (`kalkan/`) has no web dependencies; the service (`kalkan/service/`) adds versioned API, per-client API keys and policies, SQLite storage; chatbots use `clients/python` (httpx only) or plain HTTP. `/v1/check/messages` accepts the OpenAI `messages` format so most chatbots integrate without reshaping data.
+Core library has no web dependencies; the HTTP layer (now `kalkan/api/`) adds versioned API, per-client API keys and policies, SQLite storage; chatbots use `clients/python` (httpx only) or plain HTTP. `/v1/check/messages` accepts the OpenAI `messages` format so most chatbots integrate without reshaping data.
 
 ## 2026-11-11 - D7: v1 is a 4-week product build, not a research study
 No research questions or statistical evaluation. v1 = normaliser, rules, TF-IDF+LR, API, UI, Docker, docs. BERTurk and LLM red-team move to "later". Done when: >=90% injection recall, <=2% benign blocked, <50 ms on CPU.

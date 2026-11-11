@@ -9,4 +9,4 @@ COPY scripts/ scripts/
 RUN python scripts/build_dataset.py && python scripts/train_classical.py
 EXPOSE 8000
 HEALTHCHECK --interval=30s CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready')"
-CMD ["uvicorn", "kalkan.service.app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+CMD ["uvicorn", "kalkan.api.app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

@@ -1,4 +1,4 @@
-"""Build TR-PI from Turkish seed templates (+ optional external sets).
+"""Build the dataset from Turkish seed templates (+ optional external sets).
 
 Output: data/processed/{train,val,test,evasion,indirect}.jsonl with fields
 {text, label, category, template_id, transforms}.
@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from kalkan.augment import HELDOUT_TRANSFORMS, TRAIN_TRANSFORMS, augment  # noqa: E402
+from kalkan.detection.evasion import HELDOUT_TRANSFORMS, TRAIN_TRANSFORMS, augment  # noqa: E402
 
 # ---------------------------------------------------------------- injections
 OVERRIDE = {

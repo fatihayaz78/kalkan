@@ -14,4 +14,4 @@ try:
 except InjectionBlocked as e:
     reply = "Bu isteği işleyemiyorum."   # do not call the LLM
 ```
-See `docs/INTEGRATION.md` in the repo for RAG, chat transcripts, async and other languages.
+See `docs/INTEGRATION.md` for RAG, chat transcripts, async and other languages.

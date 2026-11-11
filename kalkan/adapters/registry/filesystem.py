@@ -1,9 +1,8 @@
-"""Versioned model registry on disk.
+"""File-system model registry.
 
 models/
   v1/classical.joblib, v1/metrics.json, v1/berturk/ (optional)
-  v2/...
-  active.txt          -> "v2"
+  active.txt  -> "v2"
 """
 from __future__ import annotations
 
@@ -14,7 +13,7 @@ from pathlib import Path
 _V = re.compile(r"^v(\d+)$")
 
 
-class ModelRegistry:
+class FileSystemModelRegistry:
     def __init__(self, root: str | Path = "models"):
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)

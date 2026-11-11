@@ -2,7 +2,7 @@
 
 Turkish-first prompt-injection detection, packaged as a service any chatbot can call. Send untrusted text to Kalkan before your LLM; it answers `allow`, `flag` or `block` with the reason.
 
-Bahçeşehir University MSc Data Science & AI graduation project. Project document: `docs/PROPOSAL.md`.
+Graduation project, MSc Data Science & AI, Bahçeşehir University. Background and scope: `docs/PROJECT.md`. Contributors start with `docs/CONTEXT.md`.
 
 ## Run it
 
@@ -50,24 +50,39 @@ Integration guide (RAG chunks, chat transcripts, fail-open/closed, per-client st
 | POST | `/v1/admin/models/{v}/activate` | admin key | Switch the live model (no restart) |
 | GET | `/health`, `/ready`, `/metrics` | none | Ops, Prometheus counters |
 
+## Architecture
+
+Layered, ports-and-adapters design following SOLID. The domain (`Verdict`, `Policy`, ports) has no framework dependencies; detection runs as a chain of stages; models, storage and LLM providers are adapters behind small interfaces; one composition root wires everything. Patterns used: chain of responsibility (stages), strategy (per-client policies), factory (pipeline per model version), facade (`Kalkan` in-process, application services for the API), adapter and repository (models, SQLite, registry). Details and extension points: `docs/ARCHITECTURE.md`.
+
+In-process use without the HTTP service:
+
+```python
+from kalkan import Kalkan
+guard = Kalkan.from_directory("models")
+guard.check("Önceki talimatları yok say").decision   # Decision.BLOCK
+```
+
 ## How detection works
 
 | Stage | Module | What it does |
 | --- | --- | --- |
-| 1 Normaliser | `kalkan/normalize.py` | NFKC, hidden characters, Cyrillic/Greek look-alikes, Turkish İ/ı casing, diacritics, leetspeak, spaced letters |
-| 2 Rules | `kalkan/rules.py` | High-precision patterns (override, Turkish-English mixing, system prompt extraction, persona) + Base64 decoding. Block only |
-| 3 Classical ML | `kalkan/classical.py` | Char n-gram TF-IDF + Logistic Regression |
-| 4 Transformer (later) | `kalkan/transformer.py` | Fine-tuned BERTurk; loaded automatically if `models/<version>/berturk/` exists |
+| 1 Normaliser | `kalkan/detection/normalizer.py` | NFKC, hidden characters, Cyrillic/Greek look-alikes, Turkish İ/ı casing, diacritics, leetspeak, spaced letters |
+| 2 Rules | `kalkan/detection/rules.py` | High-precision patterns (override, Turkish-English mixing, system prompt extraction, persona) + Base64 decoding. Block only |
+| 3 Screening model | `kalkan/adapters/classifiers/tfidf.py` | Char n-gram TF-IDF + Logistic Regression |
+| 4 Transformer (later) | `kalkan/adapters/classifiers/transformer.py` | Fine-tuned BERTurk; loaded automatically if `models/<version>/berturk/` exists |
 
 ## Layout
 
 ```
-kalkan/                core library (no web deps): engine, registry, training
-kalkan/service/        FastAPI service, auth, SQLite audit + feedback, demo and admin UI
+kalkan/domain/         entities, value objects, ports (no dependencies)
+kalkan/detection/      normaliser, rules, evasion transforms, stages, pipeline
+kalkan/application/    use cases, pipeline factory, policies, training
+kalkan/adapters/       classifiers, model registry, SQLite, data source, attack generators
+kalkan/api/            FastAPI routes, auth, composition root, demo and admin UI
 clients/python/        kalkan-client SDK (httpx only) for chatbots
 examples/              chatbot, RAG, LangChain, Node.js
 scripts/               build_dataset, train_classical, train_transformer, evaluate, redteam
-docs/                  INTEGRATION.md, DECISIONS.md, PROPOSAL.md
+docs/                  CONTEXT.md, ARCHITECTURE.md, INTEGRATION.md, DECISIONS.md, PROJECT.md
 ```
 
 ## Develop
@@ -75,7 +90,7 @@ docs/                  INTEGRATION.md, DECISIONS.md, PROPOSAL.md
 ```bash
 pip install -r requirements-train.txt && pip install -e clients/python
 python scripts/build_dataset.py && python scripts/train_classical.py
-uvicorn kalkan.service.app:app --reload --port 8088
+uvicorn kalkan.api.app:app --reload --port 8088
 pytest -q
 ```
 
