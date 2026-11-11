@@ -66,4 +66,5 @@ v1 is done when it catches ≥90% of injections in the test set, blocks ≤2% of
 
 Newest first. One or two lines per session: what changed, what is next.
 
+- **2026-11-11** - README: added "Where Kalkan fits" (deployment position in a company chatbot, flow and attack sequence diagrams).
 - **2026-11-11** - Project set up and pushed. Refactored to layered architecture (ports/adapters, chain of stages, factory, facades). Added this file and `ARCHITECTURE.md`. Next: real data.
