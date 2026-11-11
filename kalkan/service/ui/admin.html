@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalkan admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<style>
+  :root { --mist:#E6ECF1; --panel:#F7F9FB; --ink:#16202B; --muted:#566473; --line:#C9D3DC;
+    --iznik:#1D4E89; --allow:#2E7D4F; --flag:#A2650E; --block:#AE2A1F; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root { --mist:#101820; --panel:#172230; --ink:#E4EAF0; --muted:#9AA8B6;
+    --line:#2C3B4B; --iznik:#6FA3E0; --allow:#5DBB84; --flag:#E0A245; --block:#EF6B5E; color-scheme: dark; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--mist); color:var(--ink); font:400 15px/1.5 "Archivo", system-ui, sans-serif; }
+  main { max-width:1120px; margin:0 auto; padding:36px 24px 64px; }
+  h1 { font-size:44px; font-weight:800; font-stretch:62%; line-height:1; margin:0; color:var(--iznik); }
+  h1 a { color:inherit; text-decoration:none; }
+  h2 { font-size:15px; font-weight:700; margin:0 0 12px; }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px; margin-top:20px; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .hint { font-size:13px; color:var(--muted); }
+  button { font:inherit; font-size:14px; border-radius:999px; padding:6px 14px; cursor:pointer;
+    border:1px solid var(--line); background:transparent; color:var(--ink); }
+  button:hover { border-color:var(--iznik); }
+  button.primary { background:var(--iznik); border-color:var(--iznik); color:#fff; font-weight:600; }
+  button:focus-visible, input:focus-visible { outline:3px solid var(--iznik); outline-offset:2px; }
+  input { font:inherit; padding:6px 10px; border-radius:8px; border:1px solid var(--line); background:var(--mist); color:var(--ink); }
+  .stats { display:flex; gap:32px; flex-wrap:wrap; }
+  .stat b { display:block; font-size:34px; font-weight:800; font-stretch:62%; line-height:1.1; }
+  .stat span { font-size:13px; color:var(--muted); }
+  .allow b { color:var(--allow); } .flag b { color:var(--flag); } .block b { color:var(--block); }
+  .scroll { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th { text-align:left; font-weight:600; color:var(--muted); padding:8px; border-bottom:1px solid var(--line); }
+  td { padding:8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  td.text { max-width:460px; word-break:break-word; }
+  td.num { font-variant-numeric:tabular-nums; }
+  .tag { font-size:12px; padding:2px 8px; border-radius:999px; border:1px solid currentColor; }
+  .tag.inj { color:var(--block); } .tag.ben { color:var(--allow); } .tag.act { color:var(--iznik); }
+  .msg { font-size:14px; margin-top:10px; min-height:1.5em; }
+  .err { color:var(--block); }
+</style>
+</head>
+<body>
+<main>
+  <div class="row" style="justify-content:space-between">
+    <h1><a href="/">Kalkan</a> admin</h1>
+    <div class="row">
+      <label for="key" class="hint">Admin key</label>
+      <input id="key" type="password" autocomplete="off">
+      <button id="load">Load</button>
+    </div>
+  </div>
+  <p class="msg err" id="err"></p>
+
+  <section aria-labelledby="s-h">
+    <h2 id="s-h">Last 24 hours</h2>
+    <div class="stats" id="stats"><span class="hint">Enter the admin key and choose Load.</span></div>
+  </section>
+
+  <section aria-labelledby="f-h">
+    <h2 id="f-h">Reported results waiting for review</h2>
+    <p class="hint" style="margin-top:-6px">Accepted reports are added to the training data on the next retrain.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Text</th><th>Correct label</th><th>From</th><th></th></tr></thead>
+      <tbody id="fb"></tbody>
+    </table></div>
+  </section>
+
+  <section aria-labelledby="m-h">
+    <div class="row" style="justify-content:space-between">
+      <h2 id="m-h" style="margin:0">Model versions</h2>
+      <button class="primary" id="train">Train new version</button>
+    </div>
+    <p class="msg" id="train-msg"></p>
+    <div class="scroll"><table>
+      <thead><tr><th>Version</th><th>Training rows</th><th>Test recall</th><th>Benign blocked</th><th>Evasion recall</th><th></th></tr></thead>
+      <tbody id="models"></tbody>
+    </table></div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const pct = x => x === undefined ? "–" : (100 * x).toFixed(1) + "%";
+async function api(path, method = "GET", body) {
+  const r = await fetch(path, { method, headers: { "Content-Type": "application/json",
+    Authorization: "Bearer " + $("key").value.trim() }, body: body ? JSON.stringify(body) : undefined });
+  if (r.status === 401 || r.status === 403) throw new Error("the admin key was not accepted");
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || "HTTP " + r.status);
+  return r.json();
+}
+function cell(text, cls) { const td = document.createElement("td"); if (cls) td.className = cls; td.textContent = text; return td; }
+function tag(text, cls) { const s = document.createElement("span"); s.className = "tag " + cls; s.textContent = text; return s; }
+
+async function load() {
+  $("err").textContent = "";
+  try {
+    const [st, fb, md] = await Promise.all([api("/v1/admin/stats"), api("/v1/admin/feedback?status=pending"), api("/v1/admin/models")]);
+    const d = st.last_24h, total = (d.allow || 0) + (d.flag || 0) + (d.block || 0);
+    $("stats").innerHTML = "";
+    for (const [k, label, cls] of [["total", "Checks", ""], ["allow", "Allowed", "allow"], ["flag", "Flagged", "flag"],
+                                   ["block", "Blocked", "block"], ["pending", "Reports to review", ""]]) {
+      const div = document.createElement("div"); div.className = "stat " + cls;
+      const b = document.createElement("b"); b.textContent = k === "total" ? total : k === "pending" ? st.feedback_pending : (d[k] || 0);
+      const sp = document.createElement("span"); sp.textContent = label;
+      div.append(b, sp); $("stats").append(div);
+    }
+    $("fb").replaceChildren(...(fb.length ? fb.map(f => {
+      const tr = document.createElement("tr");
+      const lab = cell(""); lab.append(f.label ? tag("injection", "inj") : tag("benign", "ben"));
+      const act = cell(""), wrap = document.createElement("div"); wrap.className = "row"; act.append(wrap);
+      for (const [txt, status] of [["Accept", "accepted"], ["Reject", "rejected"]]) {
+        const b = document.createElement("button"); b.textContent = txt;
+        b.onclick = async () => { try { await api(`/v1/admin/feedback/${f.id}`, "POST", { status }); load(); }
+                                  catch (e) { $("err").textContent = e.message; } };
+        wrap.append(b);
+      }
+      tr.append(cell(f.text, "text"), lab, cell(f.client), act);
+      return tr;
+    }) : [Object.assign(document.createElement("tr"), { innerHTML: '<td colspan="4" class="hint">No reports waiting.</td>' })]));
+    $("models").replaceChildren(...md.versions.map(m => {
+      const tr = document.createElement("tr"), x = m.metrics || {};
+      const v = cell(m.version); if (m.version === md.active) { v.append(" "); v.append(tag("active", "act")); }
+      const act = cell("");
+      if (m.version !== md.active) {
+        const b = document.createElement("button"); b.textContent = "Activate";
+        b.onclick = async () => { try { await api(`/v1/admin/models/${m.version}/activate`, "POST"); load(); }
+                                  catch (e) { $("err").textContent = e.message; } };
+        act.append(b);
+      }
+      tr.append(v, cell(x.train_rows ?? "–", "num"), cell(pct(x.test?.recall), "num"),
+                cell(pct(x.test?.false_block_rate), "num"), cell(pct(x.evasion?.recall), "num"), act);
+      return tr;
+    }));
+  } catch (e) { $("err").textContent = "Could not load: " + e.message + "."; }
+}
+$("load").onclick = load;
+$("key").addEventListener("keydown", e => { if (e.key === "Enter") load(); });
+$("train").onclick = async () => {
+  $("train").disabled = true; $("train-msg").textContent = "Training…";
+  try {
+    const r = await api("/v1/admin/retrain", "POST");
+    $("train-msg").textContent = `Trained ${r.version} (test recall ${pct(r.metrics.test.recall)}, benign blocked ${pct(r.metrics.test.false_block_rate)}). Activate it below if it beats ${r.active_version || "the current model"}.`;
+    load();
+  } catch (e) { $("train-msg").textContent = "Training failed: " + e.message + "."; }
+  $("train").disabled = false;
+};
+</script>
+</body>
+</html>

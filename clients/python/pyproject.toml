@@ -1,0 +1,10 @@
+[project]
+name = "kalkan-client"
+version = "0.2.0"
+description = "Client for the Kalkan Turkish prompt-injection detection service"
+requires-python = ">=3.9"
+dependencies = ["httpx>=0.25"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

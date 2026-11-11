@@ -1,0 +1,15 @@
+name: kalkan   # own compose project: own network and container names, no clash with other stacks
+services:
+  kalkan:
+    build: .
+    container_name: kalkan-api
+    env_file: .env
+    ports:
+      - "${KALKAN_PORT:-8088}:8000"
+    volumes:
+      - kalkan-models:/app/models   # model versions survive restarts and retrains
+      - kalkan-db:/app/var          # audit log + feedback (SQLite)
+    restart: unless-stopped
+volumes:
+  kalkan-models:
+  kalkan-db:
